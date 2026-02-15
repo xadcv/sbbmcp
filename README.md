@@ -90,6 +90,63 @@ Or in an MCP client config:
 }
 ```
 
+## Remote MCP Server (HTTP)
+
+The server uses stdio transport by default, but you can expose it as a remote HTTP endpoint using [supergateway](https://github.com/supercorp-ai/supergateway). This lets any client that accepts an MCP Server URL connect to it — including Zapier, Pipedream, or custom integrations.
+
+### Start the HTTP server
+
+```bash
+npx -y supergateway --stdio "npx -y github:xadcv/sbbmcp" --port 8000
+```
+
+This wraps the stdio server and exposes it via SSE at:
+
+```
+http://localhost:8000/sse
+```
+
+If you have a local build, you can point at it directly:
+
+```bash
+npx -y supergateway --stdio "node /absolute/path/to/sbbmcp/dist/index.js" --port 8000
+```
+
+### Connect from a remote client
+
+Use the SSE URL wherever an MCP Server URL is requested:
+
+| Client | URL to provide |
+|--------|----------------|
+| Zapier / Pipedream / etc. | `http://<your-host>:8000/sse` |
+| Claude Desktop (remote) | See `url` config below |
+| Any SSE-compatible MCP client | `http://<your-host>:8000/sse` |
+
+Claude Desktop can also connect to a remote MCP server directly:
+
+```json
+{
+  "mcpServers": {
+    "swiss-transport": {
+      "url": "http://<your-host>:8000/sse"
+    }
+  }
+}
+```
+
+### Exposing to the internet
+
+To make the server reachable outside your local network, put it behind a reverse proxy or use a tunnel:
+
+```bash
+# Example with ngrok
+ngrok http 8000
+```
+
+Then use the resulting public URL (e.g. `https://abc123.ngrok.io/sse`) as your MCP Server URL.
+
+> **Note:** The transport.opendata.ch API has a rate limit of 3 requests/second/IP. When exposing remotely, all clients share the server's outbound IP, so the limit applies collectively.
+
 ## Tools
 
 The server exposes three tools corresponding to the three [transport.opendata.ch](https://transport.opendata.ch/) API endpoints.
