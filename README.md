@@ -1,6 +1,6 @@
 # sbbmcp
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that exposes the [Swiss Public Transport API](https://transport.opendata.ch/) as tools for LLMs. Query stations, connections, and live departure boards through Claude Desktop, Claude Code, or any MCP-compatible client.
+An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that exposes the [Swiss Public Transport API](https://transport.opendata.ch/) as tools for LLMs. Query stations, connections, and live departure boards through Claude Code, Claude Desktop, Claude.ai, or any MCP-compatible client.
 
 ## Features
 
@@ -10,12 +10,48 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 - **LLM-optimized output** — Responses are formatted as structured, readable text rather than raw JSON
 - **Minimal footprint** — Only two runtime dependencies (`@modelcontextprotocol/sdk` and `zod`); uses Node's built-in `fetch()`
 
-## Prerequisites
+## Quick Start (no local install)
 
-- **Node.js 18+** (required for native `fetch()` support)
-- **npm**
+Run directly from GitHub using `npx` — no clone or build step required:
 
-## Installation
+### Claude Code (terminal)
+
+```bash
+claude mcp add swiss-transport -- npx -y github:xadcv/sbbmcp
+```
+
+This registers the server for your current project (stored in `.mcp.json`). To make it available across all projects, add the `--scope user` flag:
+
+```bash
+claude mcp add --scope user swiss-transport -- npx -y github:xadcv/sbbmcp
+```
+
+Verify it was added:
+
+```bash
+claude mcp list
+```
+
+### Claude Desktop
+
+Add to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "swiss-transport": {
+      "command": "npx",
+      "args": ["-y", "github:xadcv/sbbmcp"]
+    }
+  }
+}
+```
+
+`npx` will fetch the repository, run `npm install` (which triggers the `prepare` script to auto-build), and start the server. Node.js 18+ is required.
+
+## Local Installation
+
+If you prefer a local checkout:
 
 ```bash
 git clone https://github.com/xadcv/sbbmcp.git
@@ -24,11 +60,21 @@ npm install
 npm run build
 ```
 
-## Usage
+Then configure your MCP client to point at the built output:
 
-### With Claude Desktop
+### Claude Code (terminal)
 
-Add the server to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+```bash
+claude mcp add swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
+```
+
+Or with `--scope user` to make it available in all projects:
+
+```bash
+claude mcp add --scope user swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
+```
+
+### Claude Desktop
 
 ```json
 {
@@ -41,15 +87,15 @@ Add the server to your Claude Desktop MCP configuration (`claude_desktop_config.
 }
 ```
 
-### With Claude Code
-
-```bash
-claude mcp add swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
-```
-
 ### Development mode
 
 Run directly from TypeScript without a build step:
+
+```bash
+npm run dev
+```
+
+Or in an MCP client config:
 
 ```json
 {
@@ -62,11 +108,78 @@ Run directly from TypeScript without a build step:
 }
 ```
 
-Or with the npm script:
+## Remote MCP Server (HTTP)
+
+The server uses stdio transport by default. To use it with browser-based clients like **Claude.ai**, or with services like Zapier and Pipedream that require an MCP Server URL, you need to expose it as an HTTP endpoint using [supergateway](https://github.com/supercorp-ai/supergateway).
+
+### 1. Start the HTTP server
 
 ```bash
-npm run dev
+npx -y supergateway --stdio "npx -y github:xadcv/sbbmcp" --port 8000
 ```
+
+This wraps the stdio server and exposes it via SSE at:
+
+```
+http://localhost:8000/sse
+```
+
+If you have a local build, you can point at it directly:
+
+```bash
+npx -y supergateway --stdio "node /absolute/path/to/sbbmcp/dist/index.js" --port 8000
+```
+
+### 2. Expose to the internet
+
+Browser-based clients (Claude.ai, Zapier, etc.) need a publicly reachable URL. Use a tunnel or reverse proxy to make your local server accessible:
+
+```bash
+# Example with ngrok
+ngrok http 8000
+```
+
+This gives you a public URL like `https://abc123.ngrok.io`. Your MCP Server URL is:
+
+```
+https://abc123.ngrok.io/sse
+```
+
+### 3. Connect your client
+
+#### Claude.ai (browser)
+
+1. Open [claude.ai](https://claude.ai) and go to **Settings**
+2. Navigate to the **Integrations** section
+3. Click **Add integration** and select **MCP Server**
+4. Enter your public SSE URL (e.g. `https://abc123.ngrok.io/sse`)
+5. Save — the three Swiss transport tools will now appear in your conversations
+
+#### Claude Code (terminal, remote)
+
+You can also point Claude Code at a remote server URL instead of a local command:
+
+```bash
+claude mcp add --transport sse swiss-transport https://abc123.ngrok.io/sse
+```
+
+#### Claude Desktop (remote)
+
+```json
+{
+  "mcpServers": {
+    "swiss-transport": {
+      "url": "https://abc123.ngrok.io/sse"
+    }
+  }
+}
+```
+
+#### Zapier / Pipedream / other integrations
+
+Enter the SSE URL (`https://<your-host>/sse`) wherever the service asks for an MCP Server URL.
+
+> **Note:** The transport.opendata.ch API has a rate limit of 3 requests/second/IP. When exposing remotely, all clients share the server's outbound IP, so the limit applies collectively.
 
 ## Tools
 
