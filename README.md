@@ -10,12 +10,36 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 - **LLM-optimized output** — Responses are formatted as structured, readable text rather than raw JSON
 - **Minimal footprint** — Only two runtime dependencies (`@modelcontextprotocol/sdk` and `zod`); uses Node's built-in `fetch()`
 
-## Prerequisites
+## Quick Start (no local install)
 
-- **Node.js 18+** (required for native `fetch()` support)
-- **npm**
+Run directly from GitHub using `npx` — no clone or build step required:
 
-## Installation
+### Claude Code
+
+```bash
+claude mcp add swiss-transport -- npx -y github:xadcv/sbbmcp
+```
+
+### Claude Desktop
+
+Add to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "swiss-transport": {
+      "command": "npx",
+      "args": ["-y", "github:xadcv/sbbmcp"]
+    }
+  }
+}
+```
+
+`npx` will fetch the repository, run `npm install` (which triggers the `prepare` script to auto-build), and start the server. Node.js 18+ is required.
+
+## Local Installation
+
+If you prefer a local checkout:
 
 ```bash
 git clone https://github.com/xadcv/sbbmcp.git
@@ -24,11 +48,15 @@ npm install
 npm run build
 ```
 
-## Usage
+Then configure your MCP client to point at the built output:
 
-### With Claude Desktop
+### Claude Code
 
-Add the server to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+```bash
+claude mcp add swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
+```
+
+### Claude Desktop
 
 ```json
 {
@@ -41,15 +69,15 @@ Add the server to your Claude Desktop MCP configuration (`claude_desktop_config.
 }
 ```
 
-### With Claude Code
-
-```bash
-claude mcp add swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
-```
-
 ### Development mode
 
 Run directly from TypeScript without a build step:
+
+```bash
+npm run dev
+```
+
+Or in an MCP client config:
 
 ```json
 {
@@ -60,12 +88,6 @@ Run directly from TypeScript without a build step:
     }
   }
 }
-```
-
-Or with the npm script:
-
-```bash
-npm run dev
 ```
 
 ## Tools
