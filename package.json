@@ -22,15 +22,22 @@
     "type": "git",
     "url": "http://local_proxy@127.0.0.1:41850/git/xadcv/sbbmcp"
   },
-  "keywords": ["mcp", "swiss-transport", "sbb", "opendata"],
+  "keywords": [
+    "mcp",
+    "swiss-transport",
+    "sbb",
+    "opendata"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "express": "^5.2.1",
     "typescript": "^5.9.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.2.3",
     "tsx": "^4.21.0"
   }
