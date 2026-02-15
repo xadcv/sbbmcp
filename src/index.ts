@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { fetchTransportAPI, TransportAPIError } from "./api.js";
 import type {
@@ -356,6 +356,19 @@ async function main() {
   if (port) {
     // HTTP mode for remote deployment (Render, etc.)
     const app = createMcpExpressApp({ host: "0.0.0.0" });
+
+    // CORS — allow browser-based clients (Claude.ai, etc.)
+    app.use((_req: Request, res: Response, next: NextFunction) => {
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Mcp-Session-Id");
+      res.header("Access-Control-Expose-Headers", "Mcp-Session-Id");
+      next();
+    });
+
+    app.options("/mcp", (_req: Request, res: Response) => {
+      res.status(204).end();
+    });
 
     app.post("/mcp", async (req: Request, res: Response) => {
       const server = createServer();
