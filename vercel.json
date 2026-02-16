@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npm run build && mkdir -p public",
+  "buildCommand": "npm run build && mkdir -p public && echo '{}' > public/index.json",
   "outputDirectory": "public",
   "rewrites": [{ "source": "/mcp", "destination": "/api/mcp" }],
   "functions": {
