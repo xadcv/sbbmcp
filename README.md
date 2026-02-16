@@ -1,57 +1,75 @@
 # sbbmcp
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that exposes the [Swiss Public Transport API](https://transport.opendata.ch/) as tools for LLMs. Query stations, connections, and live departure boards through Claude Code, Claude Desktop, Claude.ai, or any MCP-compatible client.
+An [MCP](https://modelcontextprotocol.io/) server for the [Swiss Public Transport API](https://transport.opendata.ch/). Query stations, connections, and live departure boards through any MCP-compatible client.
+
+Deployed on Vercel at:
+
+```
+https://sbbmcp.vercel.app/mcp
+```
 
 ## Features
 
 - **Station search** — Find stations, addresses, and points of interest by name or GPS coordinates
 - **Connection search** — Look up routes between two locations with filters for date, time, transport type, and via stops
-- **Station board** — Get real-time departure and arrival boards for any Swiss station, including delay information
-- **LLM-optimized output** — Responses are formatted as structured, readable text rather than raw JSON
-- **Minimal footprint** — Three runtime dependencies (`@modelcontextprotocol/sdk`, `zod`, `express`); uses Node's built-in `fetch()`
+- **Station board** — Get real-time departure and arrival boards with delay information
+- **LLM-optimized output** — Structured, readable text rather than raw JSON
 
-## Quick Start (no local install)
+## Connect to the Remote Server
 
-Run directly from GitHub using `npx` — no clone or build step required:
-
-### Claude Code (terminal)
+### Claude Code
 
 ```bash
-claude mcp add swiss-transport -- npx -y github:xadcv/sbbmcp
+claude mcp add --transport http swiss-transport https://sbbmcp.vercel.app/mcp
 ```
 
-This registers the server for your current project (stored in `.mcp.json`). To make it available across all projects, add the `--scope user` flag:
+Add `--scope user` for all projects:
 
 ```bash
-claude mcp add --scope user swiss-transport -- npx -y github:xadcv/sbbmcp
-```
-
-Verify it was added:
-
-```bash
-claude mcp list
+claude mcp add --transport http --scope user swiss-transport https://sbbmcp.vercel.app/mcp
 ```
 
 ### Claude Desktop
 
-Add to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+Add to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "swiss-transport": {
-      "command": "npx",
-      "args": ["-y", "github:xadcv/sbbmcp"]
+      "url": "https://sbbmcp.vercel.app/mcp"
     }
   }
 }
 ```
 
-`npx` will fetch the repository, run `npm install` (which triggers the `prepare` script to auto-build), and start the server. Node.js 18+ is required.
+### Claude.ai
 
-## Local Installation
+1. Go to **Settings > Integrations**
+2. Click **Add integration > MCP Server**
+3. Enter URL: `https://sbbmcp.vercel.app/mcp`
 
-If you prefer a local checkout:
+### Cursor
+
+Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "swiss-transport": {
+      "url": "https://sbbmcp.vercel.app/mcp"
+    }
+  }
+}
+```
+
+### Other clients
+
+Any client supporting [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) can connect at `https://sbbmcp.vercel.app/mcp`.
+
+## Run Locally (stdio)
+
+For local use with Claude Desktop or Claude Code without the remote server:
 
 ```bash
 git clone https://github.com/xadcv/sbbmcp.git
@@ -60,114 +78,21 @@ npm install
 npm run build
 ```
 
-Then configure your MCP client to point at the built output:
-
-### Claude Code (terminal)
+Then register via stdio:
 
 ```bash
 claude mcp add swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
 ```
 
-Or with `--scope user` to make it available in all projects:
-
-```bash
-claude mcp add --scope user swiss-transport node /absolute/path/to/sbbmcp/dist/index.js
-```
-
-### Claude Desktop
-
-```json
-{
-  "mcpServers": {
-    "swiss-transport": {
-      "command": "node",
-      "args": ["/absolute/path/to/sbbmcp/dist/index.js"]
-    }
-  }
-}
-```
-
-### Development mode
-
-Run directly from TypeScript without a build step:
+Or for development without building:
 
 ```bash
 npm run dev
 ```
 
-Or in an MCP client config:
-
-```json
-{
-  "mcpServers": {
-    "swiss-transport": {
-      "command": "npx",
-      "args": ["tsx", "/absolute/path/to/sbbmcp/src/index.ts"]
-    }
-  }
-}
-```
-
-## Remote MCP Server (hosted)
-
-A public instance is deployed at:
-
-```
-https://sbbmcp.onrender.com/mcp
-```
-
-No install or API key required — connect any MCP-compatible client to this URL.
-
-### Claude Code
-
-```bash
-claude mcp add --transport http swiss-transport https://sbbmcp.onrender.com/mcp
-```
-
-Add `--scope user` to make it available across all projects:
-
-```bash
-claude mcp add --transport http --scope user swiss-transport https://sbbmcp.onrender.com/mcp
-```
-
-### Claude Desktop
-
-Add to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "swiss-transport": {
-      "url": "https://sbbmcp.onrender.com/mcp"
-    }
-  }
-}
-```
-
-### Claude.ai (browser)
-
-1. Open [claude.ai](https://claude.ai) and go to **Settings**
-2. Navigate to the **Integrations** section
-3. Click **Add integration** and select **MCP Server**
-4. Enter the URL: `https://sbbmcp.onrender.com/mcp`
-5. Save — the three Swiss transport tools will now appear in your conversations
-
-### Zapier MCP Client
-
-1. In Zapier, add a new **MCP Client** action to your Zap
-2. Set the MCP Server URL to `https://sbbmcp.onrender.com/mcp`
-3. Select the tool you want to use (`search_locations`, `search_connections`, or `get_stationboard`)
-4. Map the tool parameters from your trigger data
-
-### Other MCP clients
-
-Any client that supports the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) can connect using the URL `https://sbbmcp.onrender.com/mcp`.
-
-> **Note:** The transport.opendata.ch API has a rate limit of 3 requests/second/IP. All remote clients share the server's outbound IP, so the limit applies collectively. The server runs on Render's free tier, which spins down after inactivity — the first request after idle may take a few seconds.
-
 ## Tools
 
-The server exposes three tools corresponding to the three [transport.opendata.ch](https://transport.opendata.ch/) API endpoints.
+Three tools wrapping the [transport.opendata.ch](https://transport.opendata.ch/) API endpoints.
 
 ### `search_locations`
 
@@ -175,30 +100,16 @@ Find Swiss public transport stations, addresses, and points of interest.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `query` | `string` | No\* | Name of the location to search for |
+| `query` | `string` | No\* | Name of the location |
 | `x` | `number` | No\* | Latitude (WGS84) |
 | `y` | `number` | No\* | Longitude (WGS84) |
-| `type` | `string` | No | Filter: `all`, `station`, `poi`, `address` (default: `all`) |
+| `type` | `string` | No | `all`, `station`, `poi`, `address` (default: `all`) |
 
 \*Either `query` or both `x` and `y` must be provided.
 
-**Example output:**
-
-```
-Found 3 locations:
-
-1. Zürich HB (ID: 8503000)
-   Coordinates: 47.378177, 8.540192
-   Type: station
-
-2. Zürich Oerlikon (ID: 8503006)
-   Coordinates: 47.411297, 8.544066
-   Type: station
-```
-
 ### `search_connections`
 
-Find public transport connections between two locations.
+Find connections between two locations.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -207,97 +118,53 @@ Find public transport connections between two locations.
 | `via` | `string[]` | No | Up to 5 intermediate stops |
 | `date` | `string` | No | Travel date (`YYYY-MM-DD`) |
 | `time` | `string` | No | Travel time (`HH:mm`) |
-| `isArrivalTime` | `boolean` | No | If `true`, date/time refer to desired arrival (default: `false`) |
-| `transportations` | `string[]` | No | Filter: `train`, `tram`, `ship`, `bus`, `cableway` |
-| `limit` | `number` | No | Number of connections, 1-6 (default: 4) |
-| `page` | `number` | No | Pagination page, 0-10 (default: 0) |
-
-**Example output:**
-
-```
-Connections from Zürich HB to Bern:
-
-1. Depart: 14:02 → Arrive: 14:58 (00d00:56:00, 0 transfers)
-   Departure platform: 6
-   IC 724 → Bern
-
-2. Depart: 14:32 → Arrive: 15:28 (00d00:56:00, 0 transfers)
-   Departure platform: 8
-   IC 728 → Bern
-```
+| `isArrivalTime` | `boolean` | No | Treat time as arrival (default: `false`) |
+| `transportations` | `string[]` | No | `train`, `tram`, `ship`, `bus`, `cableway` |
+| `limit` | `number` | No | Results 1-6 (default: 4) |
+| `page` | `number` | No | Pagination 0-10 (default: 0) |
 
 ### `get_stationboard`
 
-Get the departure or arrival board for a specific station.
+Get departures or arrivals for a station.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `station` | `string` | No\* | Station name |
-| `id` | `string` | No\* | Station ID (takes precedence over name) |
-| `limit` | `number` | No | Max entries, 1-420 (default: 20) |
-| `transportations` | `string[]` | No | Filter: `train`, `tram`, `ship`, `bus`, `cableway` |
+| `id` | `string` | No\* | Station ID (takes precedence) |
+| `limit` | `number` | No | Max entries 1-420 (default: 20) |
+| `transportations` | `string[]` | No | `train`, `tram`, `ship`, `bus`, `cableway` |
 | `datetime` | `string` | No | Date and time (`YYYY-MM-DD HH:mm`) |
 | `type` | `string` | No | `departure` or `arrival` (default: `departure`) |
 
 \*Either `station` or `id` must be provided.
 
-**Example output:**
-
-```
-Departures at Zürich HB:
-
-1. 14:02  IC 724  → Bern          Platform 6
-2. 14:04  S3      → Effretikon    Platform 43/44
-3. 14:07  IR 35   → Chur          Platform 8
-```
-
 ## Project Structure
 
 ```
 sbbmcp/
+├── api/
+│   └── mcp.ts        # Vercel serverless function (Streamable HTTP)
 ├── src/
-│   ├── index.ts     # MCP server setup, tool registration, and response formatters
-│   ├── api.ts       # HTTP client for transport.opendata.ch
-│   └── types.ts     # TypeScript interfaces for API responses
-├── dist/            # Compiled JavaScript (generated by `npm run build`)
-├── Dockerfile       # Multi-stage Docker build for deployment
-├── render.yaml      # Render deployment blueprint
+│   ├── index.ts      # Local stdio entry point
+│   ├── tools.ts      # Shared tool registration and formatters
+│   ├── api.ts        # HTTP client for transport.opendata.ch
+│   └── types.ts      # TypeScript interfaces for API responses
+├── vercel.json       # Vercel routing and function config
 ├── tsconfig.json
 └── package.json
 ```
 
-## Scripts
+## Deployment
 
-| Script | Command | Description |
-|--------|---------|-------------|
-| `npm run build` | `tsc` | Compile TypeScript to `dist/` |
-| `npm start` | `node dist/index.js` | Run the compiled MCP server |
-| `npm run dev` | `tsx src/index.ts` | Run from source without building |
-| `npm run prepare` | `npm run build` | Auto-build on `npm install` from git |
+Push to GitHub and connect the repo in the [Vercel dashboard](https://vercel.com/new). The `api/mcp.ts` serverless function is picked up automatically.
+
+For best performance, enable [Fluid compute](https://vercel.com/docs/functions/fluid-compute) in your Vercel project settings.
 
 ## API Notes
 
-This server wraps the [transport.opendata.ch v1 API](https://transport.opendata.ch/). Key details:
-
-- **Rate limit:** 3 requests per second per IP address. The server returns a descriptive error if rate-limited.
-- **No API key required.** The API is free and open.
-- **Data coverage:** Swiss public transport including SBB/CFF/FFS, PostBus, local transit, boats, and cableways.
-
-## Testing
-
-### With the MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-### Manual API verification
-
-```bash
-curl "https://transport.opendata.ch/v1/locations?query=Bern"
-curl "https://transport.opendata.ch/v1/connections?from=Bern&to=Zürich"
-curl "https://transport.opendata.ch/v1/stationboard?station=Bern&limit=5"
-```
+- **Rate limit:** 3 requests/second/IP on transport.opendata.ch
+- **No API key required** — the upstream API is free and open
+- **Coverage:** SBB/CFF/FFS, PostBus, local transit, boats, and cableways
 
 ## License
 
